@@ -408,23 +408,21 @@ let hudFlash = { k: '', t: -1e9 }; // Flash key when pressed
 const SIDEBAR = { margin: 16, gap: 4, pad: 8, rowH: 32, size: 16 };
 
 const CONTROLS = [
-  ['Export SVG',             'Shift R'],
-  // frond
+  ['Frond controls'],
   ['Bendiness',               'v b', () => state.bendiness.toFixed(3)],
   ['Scale Curve',             'x s', () => state.scaleCurve.toFixed(2)],
   ['Frond Spacing',           'g t', () => state.frondSpacing.toFixed(2)],
   ['Stem Thickness',          'j q', () => state.stemThickness],
-
-  // subfrond
+  ['Subfrond controls'],
   ['Max Angle',               'z a', () => state.maxAngle + '°'],
   ['Subfrond Density',        'f r', () => state.subfrondDensity.toFixed(4)],
   ['Subfrond to Frond Ratio', 'c d', () => state.subfrondLengthMultiplier.toFixed(1) + '×'],
-
-  // leaf
+  ['Leaflet controls'],
   ['Leaf to Subfrond Ratio',  'w e', () => state.leafToSubfrondRatio.toFixed(2)],
   ['Leaf Size',               '[ ]', () => state.leafSize],
   ['Leaf Shape',              'l',   () => state.leafShape],
   ['Leaf Spacing',            'h y', () => state.leafletSpacing.toFixed(2)],
+  ['Export SVG',             'Shift R'],
 ];
 
 function drawKeycap(keyLabel, x, y) {
@@ -477,6 +475,13 @@ function drawRow(label, keys, val, y) {
   drawKeycap(hi || lo, x, y);
 }
 
+function drawSectionHeader(label, y) {
+  fill(150);
+  textStyle(BOLD);
+  text(label, SIDEBAR.margin, y);
+  textStyle(NORMAL);
+}
+
 function drawHUD() {
   noStroke();
   fill(0);
@@ -485,17 +490,31 @@ function drawHUD() {
   line(SIDEBAR_WIDTH, 0, SIDEBAR_WIDTH, CANVAS_HEIGHT);
 
   textSize(SIDEBAR.size);
-
   noStroke();
   fill(0);
 
-  let y = 30; // first row baseline
-  CONTROLS.forEach(([label, keys, val]) => {
-    drawRow(label, keys, val, y);
+  let y = 0;
+  for (const [label, keys, val] of CONTROLS) {
     y += SIDEBAR.rowH;
-  });
+
+    if (val) {
+      drawRow(label, keys, val, y);
+      continue;
+    }
+
+    // Section headers and export rows
+    if (keys) {
+      y += SIDEBAR.rowH;
+      drawRow(label, keys, val, y);
+      continue;
+    }
+
+    y += SIDEBAR.rowH;
+    drawSectionHeader(label, y);
+  }
 
   if (state.lastSaved) {
+    y += SIDEBAR.rowH;
     noStroke();
     fill(0, 150, 0);
     text('✓ ' + state.lastSaved, SIDEBAR.margin, y + 6);
