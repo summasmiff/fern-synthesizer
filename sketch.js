@@ -410,18 +410,18 @@ const SIDEBAR = { margin: 16, gap: 4, pad: 8, rowH: 32, size: 16 };
 const CONTROLS = [
   ['Frond controls'],
   ['Bendiness',               'v b', () => state.bendiness.toFixed(3)],
-  ['Scale Curve',             'x s', () => state.scaleCurve.toFixed(2)],
-  ['Frond Spacing',           'g t', () => state.frondSpacing.toFixed(2)],
-  ['Stem Thickness',          'j q', () => state.stemThickness],
+  ['Scale Curve',             'z x', () => state.scaleCurve.toFixed(2)],
+  ['Frond Spacing',           'g h', () => state.frondSpacing.toFixed(2)],
+  ['Stem Thickness',          'j k', () => state.stemThickness],
   ['Subfrond controls'],
-  ['Max Angle',               'z a', () => state.maxAngle + '°'],
-  ['Subfrond Density',        'f r', () => state.subfrondDensity.toFixed(4)],
-  ['Subfrond to Frond Ratio', 'c d', () => state.subfrondLengthMultiplier.toFixed(1) + '×'],
+  ['Max Angle',               'a s', () => state.maxAngle + '°'],
+  ['Subfrond Density',        'e r', () => state.subfrondDensity.toFixed(4)],
+  ['Subfrond to Frond Ratio', 'd f', () => state.subfrondLengthMultiplier.toFixed(1) + '×'],
   ['Leaflet controls'],
-  ['Leaf to Subfrond Ratio',  'w e', () => state.leafToSubfrondRatio.toFixed(2)],
+  ['Leaf to Subfrond Ratio',  'q w', () => state.leafToSubfrondRatio.toFixed(2)],
   ['Leaf Size',               '[ ]', () => state.leafSize],
   ['Leaf Shape',              'l',   () => state.leafShape],
-  ['Leaf Spacing',            'h y', () => state.leafletSpacing.toFixed(2)],
+  ['Leaf Spacing',            't y', () => state.leafletSpacing.toFixed(2)],
   ['Export SVG',             'Shift R'],
 ];
 
@@ -561,33 +561,34 @@ function keyPressed() {
   switch (k) {
     case ']': state.leafSize = bump(state.leafSize, 5, 5, 100); break;
     case '[': state.leafSize = bump(state.leafSize, -5, 5, 100); break;
-    case '=': state.baseSpacing = bump(state.baseSpacing, 1, 1, 50); break;
-    case '-': state.baseSpacing = bump(state.baseSpacing, -1, 1, 50); break;
+
+    // Keyboard order: top row
+    case 'q': state.leafToSubfrondRatio = bump(state.leafToSubfrondRatio, -0.05, 0.05, 1.0); break;
+    case 'w': state.leafToSubfrondRatio = bump(state.leafToSubfrondRatio, 0.05, 0.05, 1.0); break;
+    case 'e': state.subfrondDensity = bump(state.subfrondDensity, -0.0005, 0.0001, 0.005); break;
+    case 'r': state.subfrondDensity = bump(state.subfrondDensity, 0.0005, 0.0001, 0.005); break;
+    case 't': state.leafletSpacing = bump(state.leafletSpacing, -0.05, 0.1, 1.0); break;
+    case 'y': state.leafletSpacing = bump(state.leafletSpacing, 0.05, 0.1, 1.0); break;
+   // Middle row
+    case 'a': state.maxAngle = bump(state.maxAngle, -5, 5, 90); break;
+    case 's': state.maxAngle = bump(state.maxAngle, 5, 5, 90); break;
+    case 'd': state.subfrondLengthMultiplier = bump(state.subfrondLengthMultiplier, -0.1, 1.0, 5.0); break;
+    case 'f': state.subfrondLengthMultiplier = bump(state.subfrondLengthMultiplier, 0.1, 1.0, 5.0); break;
+    case 'g': state.frondSpacing = bump(state.frondSpacing, -0.05, 0.1, 2.0); break;
+    case 'h': state.frondSpacing = bump(state.frondSpacing, 0.05, 0.1, 2.0); break;
+    case 'j': state.stemThickness = bump(state.stemThickness, -1, 1, 20); break;
+    case 'k': state.stemThickness = bump(state.stemThickness, 1, 1, 20); break;
     case 'l': {
       const idx = LEAF_ORDER.indexOf(state.leafShape);
       state.leafShape = LEAF_ORDER[(idx + 1) % LEAF_ORDER.length];
       break;
     }
-    case 'b': state.bendiness = bump(state.bendiness, 0.01, 0.001, 1.0); break;
+    // Bottom row
+    case 'z': state.scaleCurve = bump(state.scaleCurve, -0.05, 0.1, 2.0); break;
+    case 'x': state.scaleCurve = bump(state.scaleCurve, 0.05, 0.1, 2.0); break;
     case 'v': state.bendiness = bump(state.bendiness, -0.01, 0.001, 0.2); break;
-    case 'a': state.maxAngle = bump(state.maxAngle, 5, 5, 90); break;
-    case 'z': state.maxAngle = bump(state.maxAngle, -5, 5, 90); break;
-    case 's': state.scaleCurve = bump(state.scaleCurve, 0.05, 0.1, 2.0); break;
-    case 'x': state.scaleCurve = bump(state.scaleCurve, -0.05, 0.1, 2.0); break;
-    case 'd': state.subfrondLengthMultiplier = bump(state.subfrondLengthMultiplier, 0.1, 1.0, 5.0); break;
-    case 'c': state.subfrondLengthMultiplier = bump(state.subfrondLengthMultiplier, -0.1, 1.0, 5.0); break;
-    case 'e': state.leafToSubfrondRatio = bump(state.leafToSubfrondRatio, 0.05, 0.05, 1.0); break;
-    case 'w': state.leafToSubfrondRatio = bump(state.leafToSubfrondRatio, -0.05, 0.05, 1.0); break;
-    case 'r': state.subfrondDensity = bump(state.subfrondDensity, 0.0005, 0.0001, 0.005); break;
-    case 'f': state.subfrondDensity = bump(state.subfrondDensity, -0.0005, 0.0001, 0.005); break;
-    case 't': state.frondSpacing = bump(state.frondSpacing, 0.05, 0.1, 2.0); break;
-    case 'g': state.frondSpacing = bump(state.frondSpacing, -0.05, 0.1, 2.0); break;
-    case 'y': state.leafletSpacing = bump(state.leafletSpacing, 0.05, 0.1, 1.0); break;
-    case 'h': state.leafletSpacing = bump(state.leafletSpacing, -0.05, 0.1, 1.0); break;
-    case 'q': state.stemThickness = bump(state.stemThickness, 1, 1, 20); break;
-    case 'j': state.stemThickness = bump(state.stemThickness, -1, 1, 20); break;
-    case 'p': state.maxPinnaSize = bump(state.maxPinnaSize, 1, 1, 20); break;
-    case 'o': state.maxPinnaSize = bump(state.maxPinnaSize, -1, 1, 20); break;
+    case 'b': state.bendiness = bump(state.bendiness, 0.01, 0.001, 1.0); break;
+
     default: return; // unhandled key
   }
 
