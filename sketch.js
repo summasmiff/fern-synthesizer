@@ -1,16 +1,19 @@
 'use strict';
 // =====================================================================
-// "the fern synthesizer: create unique fern fronds"
+// "the fern synthesizer: generate fern fronds"
 // =====================================================================
 
 // ---- boring constants ----------------------------------------------
-const SKETCH_WIDTH   = 600;
-const SKETCH_HEIGHT  = 700;
-const PREVIEW_HEIGHT = SKETCH_HEIGHT + 100; // additional height for parameter display
+const CANVAS_HEIGHT  = 720;
+const CANVAS_WIDTH   = Math.round((CANVAS_HEIGHT * 4) / 3); // 960 → 4:3
+const SIDEBAR_WIDTH  = 300;
+const SKETCH_WIDTH   = CANVAS_WIDTH - SIDEBAR_WIDTH;
+const SKETCH_HEIGHT  = CANVAS_HEIGHT;
 const FROND_LENGTH   = SKETCH_HEIGHT - 40;
-const MAX_PINNA_SIZE = 3; // controls recursion depth
+
 
 // ---- the fun zone (default values; tweak with the keyboard) ---------------
+const MAX_PINNA_SIZE = 3; // controls recursion depth
 const LEAF_SIZE  = 30;
 const LEAF_SPACING = 7;
 const SUBFROND_LENGTH_MULTIPLIER = 2.8;
@@ -392,86 +395,116 @@ function redrawFern() {
 }
 
 function setup() {
-  createCanvas(SKETCH_WIDTH, PREVIEW_HEIGHT);
+  createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
   frameRate(60);
   state = makeState();
   fernG = createGraphics(SKETCH_WIDTH, SKETCH_HEIGHT);
   redrawFern(); // initial render
 }
 
-// ------------------------------------------------------------- HUD ----
-// CONTROLS fill a grid, HUD.cols per row. Every label in a column shares
-// one left x, so the labels align in 3 vertical columns.
+// ------------------------------- HUD ----------------------------------
 
-let hudFlash = { k: '', t: -1e9 };               // last key pressed → cap highlight
-const HUD = { margin: 10, gap: 24, pad: 8, rowH: 17, size: 11, cols: 3 };
+let hudFlash = { k: '', t: -1e9 }; // Flash key when pressed
+const SIDEBAR = { margin: 16, gap: 4, pad: 8, rowH: 32, size: 16 };
 
 const CONTROLS = [
   ['Export SVG',             'Shift R'],
-  ['Leaf Size',              '[ ]', () => state.leafSize],
-  ['Leaf Shape',             'l',   () => state.leafShape],
-  ['Base Spacing',           '- =', () => state.baseSpacing],
-  ['Max Angle',              'z a', () => state.maxAngle + '°'],
-  ['Bendiness',              'v b', () => state.bendiness.toFixed(3)],
-  ['Scale Curve',            'x s', () => state.scaleCurve.toFixed(2)],
-  ['Frond Spacing',          'g t', () => state.frondSpacing.toFixed(2)],
-  ['Leaflet Spacing',        'h y', () => state.leafletSpacing.toFixed(2)],
-  ['Subfrond Length',        'c d', () => state.subfrondLengthMultiplier.toFixed(1) + '×'],
-  ['Leaf to Subfrond Ratio', 'w e', () => state.leafToSubfrondRatio.toFixed(2)],
-  ['Subfrond Density',       'f r', () => state.subfrondDensity.toFixed(4)],
-  ['Stem Thickness',         'j q', () => state.stemThickness],
-  ['Max Pinna Size',         'o p', () => state.maxPinnaSize],
+  // frond
+  ['Bendiness',               'v b', () => state.bendiness.toFixed(3)],
+  ['Scale Curve',             'x s', () => state.scaleCurve.toFixed(2)],
+  ['Frond Spacing',           'g t', () => state.frondSpacing.toFixed(2)],
+  ['Stem Thickness',          'j q', () => state.stemThickness],
+
+  // subfrond
+  ['Max Angle',               'z a', () => state.maxAngle + '°'],
+  ['Subfrond Density',        'f r', () => state.subfrondDensity.toFixed(4)],
+  ['Subfrond to Frond Ratio', 'c d', () => state.subfrondLengthMultiplier.toFixed(1) + '×'],
+
+  // leaf
+  ['Leaf to Subfrond Ratio',  'w e', () => state.leafToSubfrondRatio.toFixed(2)],
+  ['Leaf Size',               '[ ]', () => state.leafSize],
+  ['Leaf Shape',              'l',   () => state.leafShape],
+  ['Leaf Spacing',            'h y', () => state.leafletSpacing.toFixed(2)],
 ];
 
-function drawKeycap(k, x, y) {                   // one cap → the x after it
-  const w = textWidth(k) + 8, hot = hudFlash.k === k && millis() - hudFlash.t < 180;
-  stroke(hot ? 60 : 150); fill(hot ? 70 : 246); rect(x, y - 10, w, 15, 4);
-  noStroke(); fill(hot ? 255 : 0); text(k, x + (w - textWidth(k)) / 2, y);
-  return x + w;
+function drawKeycap(keyLabel, x, y) {
+  const isHot = hudFlash.k === keyLabel && millis() - hudFlash.t < 180;
+
+  const labelWidth = textWidth(keyLabel);
+  const keyWidth = labelWidth + 12;
+  const keyHeight = 20;
+
+  // Key bg
+  stroke(isHot ? 255 : 60);
+  fill(isHot ? 246 : 0);
+  rect(x, y - 14, keyWidth, keyHeight, 4);
+
+  // Key text
+  noStroke();
+  fill(isHot ? 0 : 255);
+  const textX = x + (keyWidth - labelWidth) / 2;
+  text(keyLabel, textX, y);
+
+  return x + keyWidth;
 }
 
-function cellW(label, keys, val) {               // width of one control, as drawn
+function rowWidth(label, keys, val) {
   const v = val ? String(val()) : '', [lo, hi] = keys.split(' ');
-  let w = textWidth(v ? label + ': ' : label) + (v ? 0 : HUD.pad);
-  if (lo && hi) w += textWidth(lo) + 8 + 4;      // [lo] + gap
-  if (v) { textStyle(BOLD); w += textWidth(v) + 4; textStyle(NORMAL); }
-  return w + textWidth(hi || lo) + 8;            // [hi] or lone [key]
+  let w = textWidth(v ? label + ': ' : label) + (v ? 0 : SIDEBAR.pad);
+  if (lo && hi) w += textWidth(lo) + 8 + SIDEBAR.gap;
+  if (v) { textStyle(BOLD); w += textWidth(v) + SIDEBAR.gap; textStyle(NORMAL); }
+  return w + textWidth(hi || lo) + 8;
+}
+
+function drawRow(label, keys, val, y) {
+  const v = val ? String(val()) : '';
+  const [lo, hi] = keys.split(' ');
+  const head = v ? label + ': ' : label;
+
+  let x = SIDEBAR.margin;
+  noStroke();
+  fill(255);
+  text(head, x, y);
+  x += textWidth(head) + (v ? 0 : SIDEBAR.pad);
+  if (lo && hi) x = drawKeycap(lo, x, y) + SIDEBAR.gap;
+  if (v) {
+    textStyle(BOLD);
+    const vw = textWidth(v);
+    text(v, x, y);
+    textStyle(NORMAL);
+    x += vw + SIDEBAR.gap;
+  }
+  drawKeycap(hi || lo, x, y);
 }
 
 function drawHUD() {
-  textSize(HUD.size);
-  const cols = HUD.cols, colW = new Array(cols).fill(0), colX = [];
+  noStroke();
+  fill(0);
+  rect(0, 0, SIDEBAR_WIDTH, CANVAS_HEIGHT);
+  stroke(100);
+  line(SIDEBAR_WIDTH, 0, SIDEBAR_WIDTH, CANVAS_HEIGHT);
 
-  CONTROLS.forEach((c, i) => { const k = i % cols; colW[k] = Math.max(colW[k], cellW(...c)); });
-  let cx = HUD.margin;                           // column starts = running sum of widths + gaps
-  for (let c = 0; c < cols; c++) { colX[c] = cx; cx += colW[c] + HUD.gap; }
-  if (cx - HUD.gap > SKETCH_WIDTH - HUD.margin) console.warn('HUD: columns exceed canvas width');
+  textSize(SIDEBAR.size);
 
-  let y = SKETCH_HEIGHT + 16;
-  CONTROLS.forEach(([label, keys, val], i) => {
-    if (i && i % cols === 0) y += HUD.rowH;                       // next grid row
-    let x = colX[i % cols];
-    const v = val ? String(val()) : '', [lo, hi] = keys.split(' '), head = v ? label + ': ' : label;
-    noStroke(); fill(v ? 110 : 0); text(head, x, y);              // gray label, black value
-    x += textWidth(head) + (v ? 0 : HUD.pad);
-    if (lo && hi) x = drawKeycap(lo, x, y) + 4;
-    if (v) { fill(0); textStyle(BOLD); const vw = textWidth(v); text(v, x, y); textStyle(NORMAL); x += vw + 4; }
-    drawKeycap(hi || lo, x, y);
+  noStroke();
+  fill(0);
+
+  let y = 30; // first row baseline
+  CONTROLS.forEach(([label, keys, val]) => {
+    drawRow(label, keys, val, y);
+    y += SIDEBAR.rowH;
   });
 
-  if (state.lastSaved) {                                          // next free grid slot
-    const i = CONTROLS.length;
-    if (i && i % cols === 0) y += HUD.rowH;
-    fill(0, 150, 0); text('✓ ' + state.lastSaved, colX[i % cols], y);
+  if (state.lastSaved) {
+    noStroke();
+    fill(0, 150, 0);
+    text('✓ ' + state.lastSaved, SIDEBAR.margin, y + 6);
   }
 }
 
 function draw() {
   background(255, 255, 255);
-  if (fernG) image(fernG, 0, 0);
-
-  stroke(200);
-  line(0, SKETCH_HEIGHT, SKETCH_WIDTH, SKETCH_HEIGHT);
+  if (fernG) image(fernG, SIDEBAR_WIDTH, 0);
 
   drawHUD();
 }
