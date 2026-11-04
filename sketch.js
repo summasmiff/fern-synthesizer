@@ -17,7 +17,6 @@ const MAX_PINNA_SIZE = 3; // controls recursion depth
 const LEAF_SIZE  = 30;
 const LEAF_SPACING = 7;
 const SUBFROND_LENGTH_MULTIPLIER = 2.8;
-const SUBFROND_DENSITY = 0.001;
 
 const MAX_ANGLE = 85;       // 90: perpendicular to main stem
 const SCALE_CURVE = 0.65;   // <1.0 concave curve, >1.0 convex curve
@@ -262,7 +261,6 @@ function drawAttachment(g, x, y, rotation, size, depth, state) {
       g,
       subfrondLen,                        // total length
       size * state.leafToSubfrondRatio,   // leaf-size
-      size * state.subfrondDensity,       // base-spacing
       0,                                  // start-y
       -subfrondLen,                       // end-y
       -1,                                 // direction
@@ -279,7 +277,7 @@ function drawAttachment(g, x, y, rotation, size, depth, state) {
   g.pop();
 }
 
-function drawFrond(g, length, leafSize, baseSpacing, startY, endY, direction, depth, curveDir, sr, state) {
+function drawFrond(g, length, leafSize, startY, endY, direction, depth, curveDir, sr, state) {
   g.stroke(0);
   g.strokeWeight(1);
 
@@ -291,10 +289,10 @@ function drawFrond(g, length, leafSize, baseSpacing, startY, endY, direction, de
 
   // hard upper-limit for the loop counter to prevent infinite loops
   const emptyStemSteps = Math.floor(emptyStem / emptyStepSize);
-  const maxLeavesBySpacing = Math.floor(length / baseSpacing);
   const minPixelsPerLeaf = 3.0;
-  const maxLeavesBySize = Math.floor(length / minPixelsPerLeaf);
-  const effectiveLoops = emptyStemSteps + Math.max(2, Math.min(maxLeavesBySpacing, maxLeavesBySize));
+  // loop budget: stem leaves assumed ≥ minLeafSpacing apart, subfrond leaflets ≥ 3px
+  const maxLeaves = Math.floor(length / (depth === 0 ? state.minLeafSpacing : minPixelsPerLeaf));
+  const effectiveLoops = emptyStemSteps + Math.max(2, maxLeaves);
   const minLocalSpacing = 2;
 
   const curveFn = depth === 0
@@ -345,7 +343,6 @@ function drawFern(g, state) {
     g,
     frondLen,
     state.leafSize,
-    state.baseSpacing,
     0,
     -frondLen,
     -1,
@@ -366,12 +363,11 @@ let fernG;
 function makeState() {
   return {
     leafSize: LEAF_SIZE,
-    baseSpacing: LEAF_SPACING,
+    minLeafSpacing: LEAF_SPACING,
     leafShape: 'blade',
     frondLength: FROND_LENGTH,
     maxPinnaSize: MAX_PINNA_SIZE,
     leafToSubfrondRatio: LEAF_TO_SUBFROND_RATIO,
-    subfrondDensity: SUBFROND_DENSITY,
     frondSpacing: FROND_SPACING,
     leafletSpacing: LEAFLET_SPACING,
     scaleCurve: SCALE_CURVE,
@@ -415,7 +411,6 @@ const CONTROLS = [
   ['Stem Thickness',          'j k', () => state.stemThickness],
   ['Subfrond controls'],
   ['Max Angle',               'a s', () => state.maxAngle + '°'],
-  ['Subfrond Density',        'e r', () => state.subfrondDensity.toFixed(4)],
   ['Subfrond to Frond Ratio', 'd f', () => state.subfrondLengthMultiplier.toFixed(1) + '×'],
   ['Leaflet controls'],
   ['Leaf to Subfrond Ratio',  'q w', () => state.leafToSubfrondRatio.toFixed(2)],
@@ -565,8 +560,6 @@ function keyPressed() {
     // Keyboard order: top row
     case 'q': state.leafToSubfrondRatio = bump(state.leafToSubfrondRatio, -0.05, 0.05, 1.0); break;
     case 'w': state.leafToSubfrondRatio = bump(state.leafToSubfrondRatio, 0.05, 0.05, 1.0); break;
-    case 'e': state.subfrondDensity = bump(state.subfrondDensity, -0.0005, 0.0001, 0.005); break;
-    case 'r': state.subfrondDensity = bump(state.subfrondDensity, 0.0005, 0.0001, 0.005); break;
     case 't': state.leafletSpacing = bump(state.leafletSpacing, -0.05, 0.1, 1.0); break;
     case 'y': state.leafletSpacing = bump(state.leafletSpacing, 0.05, 0.1, 1.0); break;
    // Middle row
