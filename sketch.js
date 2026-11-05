@@ -320,35 +320,23 @@ function drawFrond(g, length, leafSize, startY, endY, direction, depth, curveDir
 }
 
 function drawFern(g, state) {
-  const emergenceY = SKETCH_HEIGHT / 2; // 0 = center
   const frondLen = state.frondLength;
-  const localState = {...state};
-
-  g.push();
-  g.translate(0, emergenceY);
+  const localState = { ...state };
 
   if (state.recursionDepth === 0) {
-    // single leaflet spanning the whole frond, no stem
     g.stroke(0);
     g.strokeWeight(1);
     const leafFn = LEAF_SHAPES[state.leafShape] || drawOvalLeaf;
     leafFn(g, 0, 0, frondLen);
   } else {
     drawFrond(
-      g,
-      frondLen,
-      state.leafSize,
-      0,
-      -frondLen,
-      -1,
-      0,
-      1,
+      g, frondLen, state.leafSize,
+      0, -frondLen, -1,           // start 0, end -frondLen → upward
+      0, 1,
       getSpacingRatio(0, localState),
       localState
     );
   }
-
-  g.pop();
 }
 
 // =====================================================================
@@ -382,7 +370,7 @@ function redrawFern() {
   randomSeed(state.seed);
   fernG.background(255);
   fernG.push();
-  fernG.translate(SKETCH_WIDTH / 2, SKETCH_HEIGHT / 2);
+  fernG.translate(SKETCH_WIDTH / 2, SKETCH_HEIGHT); // fern base at bottom-center
   drawFern(fernG, state);
   fernG.pop();
 }
@@ -517,13 +505,13 @@ function exportFern() {
   randomSeed(state.seed);
   const svgG = createGraphics(SKETCH_WIDTH, SKETCH_HEIGHT, SVG);
   svgG.push();
-  svgG.translate(SKETCH_WIDTH / 2, SKETCH_HEIGHT / 2);
+  svgG.translate(SKETCH_WIDTH / 2, SKETCH_HEIGHT);
   drawFern(svgG, state);
   svgG.pop();
 
   const filename = `fern-${frameCount}.svg`;
   svgG.save(filename);
-  svgG.remove();        // frees the hidden DOM node the renderer created
+  svgG.remove();
 
   state.lastSaved = filename;
 }
