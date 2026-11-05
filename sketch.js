@@ -563,8 +563,8 @@ function keyPressed() {
     case 't': state.leafletSpacing = bump(state.leafletSpacing, -0.05, 0.1, 1.0); break;
     case 'y': state.leafletSpacing = bump(state.leafletSpacing, 0.05, 0.1, 1.0); break;
    // Middle row
-    case 'a': state.maxAngle = bump(state.maxAngle, -5, 5, 90); break;
-    case 's': state.maxAngle = bump(state.maxAngle, 5, 5, 90); break;
+    case 'a': state.maxAngle = bump(state.maxAngle, -5, 5, 180); break;
+    case 's': state.maxAngle = bump(state.maxAngle, 5, 5, 180); break;
     case 'd': state.subfrondLengthMultiplier = bump(state.subfrondLengthMultiplier, -0.1, 1.0, 5.0); break;
     case 'f': state.subfrondLengthMultiplier = bump(state.subfrondLengthMultiplier, 0.1, 1.0, 5.0); break;
     case 'g': state.frondSpacing = bump(state.frondSpacing, -0.05, 0.1, 2.0); break;
