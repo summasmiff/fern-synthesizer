@@ -306,7 +306,7 @@ function drawFrond(g, length, leafSize, startY, endY, direction, depth, curveDir
     // leaf or subfrond
     if (distTraveled > emptyStem) {
       drawAttachment(g, curveX, currentY, rotation, size, depth, state);
-      drawAttachment(g, curveX, currentY, -rotation, size, depth, state);
+      if (state.opposed) drawAttachment(g, curveX, currentY, -rotation, size, depth, state);
     }
 
     // next
@@ -358,6 +358,7 @@ function makeState() {
     stemThickness: STEM_THICKNESS,
     lastSaved: null,
     seed: Math.floor(Math.random() * 1e9),
+    opposed: true,   // true = matched pairs, false = alternating sides
   };
 }
 
@@ -394,6 +395,7 @@ const CONTROLS = [
   ['Subfrond controls'],
   ['Max Angle',               'a s', () => state.maxAngle + '°'],
   ['Subfrond to Frond Ratio', 'd f', () => state.subfrondLengthMultiplier.toFixed(1) + '×'],
+  ['Subfrond Arrangement',    'o',   () => state.opposed ? 'opposed' : 'offset'],
   ['Leaflet controls'],
   ['Leaf to Subfrond Ratio',  'q w', () => state.leafToSubfrondRatio.toFixed(2)],
   ['Leaf Size',               '[ ]', () => state.leafSize],
@@ -538,6 +540,7 @@ function keyPressed() {
     case 'w': state.leafToSubfrondRatio = bump(state.leafToSubfrondRatio, 0.05, 0.05, 1.0); break;
     case 't': state.leafletSpacing = bump(state.leafletSpacing, -0.05, 0.1, 1.0); break;
     case 'y': state.leafletSpacing = bump(state.leafletSpacing, 0.05, 0.1, 1.0); break;
+    case 'o': state.opposed = !state.opposed; break;
    // Middle row
     case 'a': state.maxAngle = bump(state.maxAngle, -5, 5, 180); break;
     case 's': state.maxAngle = bump(state.maxAngle, 5, 5, 180); break;
