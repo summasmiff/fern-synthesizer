@@ -15,7 +15,6 @@ const FROND_LENGTH   = SKETCH_HEIGHT - 40;
 // ---- the fun zone (initial values; tweak with the keyboard) ---------------
 const RECURSION_DEPTH = 2; // frond nesting levels: 0 = one leaflet, 1 = frond + leaflets, 2 = + subfronds, 3 = + sub-subfronds
 const LEAF_SIZE  = 30;
-const LEAF_SPACING = 7;
 const SUBFROND_LENGTH_MULTIPLIER = 2.8;
 
 const MAX_ANGLE = 85;       // 90: perpendicular to main stem
@@ -153,7 +152,7 @@ const LEAF_ORDER = ['heart', 'oval', 'blade', 'smooth'];
 
 // frondSpacing on the main stem and any frond bearing subfronds; leafletSpacing on leaflet-bearing stems
 function getSpacingRatio(depth, state) {
-  return (depth === 0 || depth + 1 < state.recursionDepth)
+  return (depth + 1 < state.recursionDepth)
     ? state.frondSpacing
     : state.leafletSpacing;
 }
@@ -165,7 +164,7 @@ function angleAttrs(yProgress, state) {
   const maxAngle = state.maxAngle;
   const bottomFactor = Math.pow(1 - yProgress, exponent);
   const angleDeg = maxAngle * bottomFactor;
-  const randomizedDeg = angleDeg + random(15);
+  const randomizedDeg = angleDeg + random(-7, 7);
   return Math.max(5, Math.min(maxAngle, randomizedDeg));
 }
 
@@ -278,9 +277,7 @@ function drawFrond(g, length, leafSize, startY, endY, direction, depth, curveDir
 
   // hard upper-limit for the loop counter to prevent infinite loops
   const emptyStemSteps = Math.floor(emptyStem / emptyStepSize);
-  const minPixelsPerLeaf = 3.0;
-  // loop budget: stem leaves assumed ≥ minLeafSpacing apart, subfrond leaflets ≥ 3px
-  const maxLeaves = Math.floor(length / (depth === 0 ? state.minLeafSpacing : minPixelsPerLeaf));
+  const maxLeaves = Math.floor(length / 2);
   const effectiveLoops = emptyStemSteps + Math.max(2, maxLeaves);
   const minLocalSpacing = 2;
 
@@ -293,10 +290,11 @@ function drawFrond(g, length, leafSize, startY, endY, direction, depth, curveDir
 
   while (i < effectiveLoops && inBounds(currentY, endY, direction)) {
     const distTraveled = Math.abs(startY - currentY);
+    const progress = distTraveled / length;
     const { curveX, size, rotation, spacing } =
       computeSegmentGeometry(i, startY, currentY, length, bend, leafSize, sr, state, curveFn);
     const localSpacing = Math.max(minLocalSpacing, spacing);
-    const taper = i / (effectiveLoops - 1);
+    const taper = Math.min(1, progress);
 
     // stem segment
     if (depth === 0) {
@@ -321,7 +319,6 @@ function drawFrond(g, length, leafSize, startY, endY, direction, depth, curveDir
 
 function drawFern(g, state) {
   const frondLen = state.frondLength;
-  const localState = { ...state };
 
   if (state.recursionDepth === 0) {
     g.stroke(0);
@@ -333,8 +330,8 @@ function drawFern(g, state) {
       g, frondLen, state.leafSize,
       0, -frondLen, -1,           // start 0, end -frondLen → upward
       0, 1,
-      getSpacingRatio(0, localState),
-      localState
+      getSpacingRatio(0, state),
+      state
     );
   }
 }
@@ -349,7 +346,6 @@ function makeState() {
   return {
     recursionDepth: RECURSION_DEPTH,
     leafSize: LEAF_SIZE,
-    minLeafSpacing: LEAF_SPACING,
     leafShape: 'blade',
     frondLength: FROND_LENGTH,
     leafToSubfrondRatio: LEAF_TO_SUBFROND_RATIO,
