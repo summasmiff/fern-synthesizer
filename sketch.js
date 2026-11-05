@@ -324,7 +324,7 @@ function drawFern(g, state) {
     g.stroke(0);
     g.strokeWeight(1);
     const leafFn = LEAF_SHAPES[state.leafShape] || drawOvalLeaf;
-    leafFn(g, 0, 0, frondLen);
+    leafFn(g, 0, 0, Math.min(frondLen, SKETCH_HEIGHT / 1.15));
   } else {
     drawFrond(
       g, frondLen, state.leafSize,
