@@ -12,8 +12,8 @@ const SKETCH_HEIGHT  = CANVAS_HEIGHT;
 const FROND_LENGTH   = SKETCH_HEIGHT - 40;
 
 
-// ---- the fun zone (default values; tweak with the keyboard) ---------------
-const MAX_PINNA_SIZE = 3; // controls recursion depth
+// ---- the fun zone (initial values; tweak with the keyboard) ---------------
+const RECURSION_DEPTH = 2; // frond nesting levels: 0 = one leaflet, 1 = frond + leaflets, 2 = + subfronds, 3 = + sub-subfronds
 const LEAF_SIZE  = 30;
 const LEAF_SPACING = 7;
 const SUBFROND_LENGTH_MULTIPLIER = 2.8;
@@ -166,8 +166,11 @@ const LEAF_ORDER = ['heart', 'oval', 'blade', 'smooth'];
 // Fern drawing
 // =====================================================================
 
+// frondSpacing on the main stem and any frond bearing subfronds; leafletSpacing on leaflet-bearing stems
 function getSpacingRatio(depth, state) {
-  return depth === 0 ? state.frondSpacing : state.leafletSpacing;
+  return (depth === 0 || depth + 1 < state.recursionDepth)
+    ? state.frondSpacing
+    : state.leafletSpacing;
 }
 
 // attachment angle of leaflet/subfrond to stem. 90° -> horizontal, 0° -> vertical.
@@ -227,8 +230,9 @@ function computeSegmentGeometry(i, startY, currentY, length, bend, leafSize, dep
   return { curveX, size: attrs.size, rotation, spacing: attrs.spacing };
 }
 
-function shouldRecurse(size, depth, state) {
-  return size > state.maxPinnaSize && depth < 1;
+// leaflets grow on fronds at depth recursionDepth - 1; anything shallower branches again
+function shouldRecurse(depth, state) {
+  return depth + 1 < state.recursionDepth;
 }
 
 function drawStemSegment(g, x1, y1, x2, y2, taper, state) {
@@ -253,7 +257,7 @@ function drawAttachment(g, x, y, rotation, size, depth, state) {
   g.translate(x, y);
   g.rotate(rotation);
 
-  if (shouldRecurse(size, depth, state)) {
+  if (shouldRecurse(depth, state)) {
     const nextCurveDir = rotation > 0 ? 1 : -1;
     const spacingRatio = getSpacingRatio(depth + 1, state);
     const subfrondLen = size * state.subfrondLengthMultiplier;
@@ -339,18 +343,28 @@ function drawFern(g, state) {
 
   g.push();
   g.translate(0, emergenceY);
-  drawFrond(
-    g,
-    frondLen,
-    state.leafSize,
-    0,
-    -frondLen,
-    -1,
-    0,
-    1,
-    getSpacingRatio(0, localState),
-    localState
-  );
+
+  if (state.recursionDepth === 0) {
+    // single leaflet spanning the whole frond, no stem
+    g.stroke(0);
+    g.strokeWeight(1);
+    const leafFn = LEAF_SHAPES[state.leafShape] || drawOvalLeaf;
+    leafFn(g, 0, 0, frondLen);
+  } else {
+    drawFrond(
+      g,
+      frondLen,
+      state.leafSize,
+      0,
+      -frondLen,
+      -1,
+      0,
+      1,
+      getSpacingRatio(0, localState),
+      localState
+    );
+  }
+
   g.pop();
 }
 
@@ -362,11 +376,11 @@ let fernG;
 
 function makeState() {
   return {
+    recursionDepth: RECURSION_DEPTH,
     leafSize: LEAF_SIZE,
     minLeafSpacing: LEAF_SPACING,
     leafShape: 'blade',
     frondLength: FROND_LENGTH,
-    maxPinnaSize: MAX_PINNA_SIZE,
     leafToSubfrondRatio: LEAF_TO_SUBFROND_RATIO,
     frondSpacing: FROND_SPACING,
     leafletSpacing: LEAFLET_SPACING,
@@ -405,6 +419,7 @@ const SIDEBAR = { margin: 16, gap: 4, pad: 8, rowH: 32, size: 16 };
 
 const CONTROLS = [
   ['Frond controls'],
+  ['Recursion Depth',         '- +', () => state.recursionDepth],
   ['Bendiness',               'v b', () => state.bendiness.toFixed(3)],
   ['Scale Curve',             'z x', () => state.scaleCurve.toFixed(2)],
   ['Frond Spacing',           'g h', () => state.frondSpacing.toFixed(2)],
@@ -549,13 +564,15 @@ function keyPressed() {
     return false;
   }
 
-  // Forgiving matching: 'A' behaves like 'a', '+' like '=', '_' like '-'.
-  const k = key === '+' ? '=' : key === '_' ? '-' : key.toLowerCase();
+  // Forgiving matching: 'A' behaves like 'a'
+  const k = key.toLowerCase();
   hudFlash = { k, t: millis() };
 
   switch (k) {
     case ']': state.leafSize = bump(state.leafSize, 5, 5, 100); break;
     case '[': state.leafSize = bump(state.leafSize, -5, 5, 100); break;
+    case '+': state.recursionDepth = bump(state.recursionDepth, 1, 0, 3); break;
+    case '-': state.recursionDepth = bump(state.recursionDepth, -1, 0, 3); break;
 
     // Keyboard order: top row
     case 'q': state.leafToSubfrondRatio = bump(state.leafToSubfrondRatio, -0.05, 0.05, 1.0); break;
