@@ -383,7 +383,7 @@ function setup() {
 // ------------------------------- HUD ----------------------------------
 
 let hudFlash = { k: '', t: -1e9 };
-let keycaps = []; // clickable caps, rebuilt each frame
+let keycaps = [];
 const SIDEBAR = { margin: 16, gap: 4, pad: 8, rowH: 32, size: 16 };
 
 const CONTROLS = [
@@ -473,7 +473,7 @@ function drawSectionHeader(label, y) {
 function drawHUD() {
   keycaps = [];
   noStroke();
-  fill(22);
+  fill(0);
   rect(0, 0, SIDEBAR_WIDTH, CANVAS_HEIGHT);
   stroke(45);
   line(SIDEBAR_WIDTH, 0, SIDEBAR_WIDTH, CANVAS_HEIGHT);
