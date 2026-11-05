@@ -382,7 +382,8 @@ function setup() {
 
 // ------------------------------- HUD ----------------------------------
 
-let hudFlash = { k: '', t: -1e9 }; // Flash key when pressed
+let hudFlash = { k: '', t: -1e9 };
+let keycaps = []; // clickable caps, rebuilt each frame
 const SIDEBAR = { margin: 16, gap: 4, pad: 8, rowH: 32, size: 16 };
 
 const CONTROLS = [
@@ -405,22 +406,35 @@ const CONTROLS = [
 ];
 
 function drawKeycap(keyLabel, x, y) {
-  const isHot = hudFlash.k === keyLabel && millis() - hudFlash.t < 180;
+  const isHot  = hudFlash.k === keyLabel && millis() - hudFlash.t < 180;
+  const isOver = keyLabel !== 'Shift' && mouseX > x && mouseX < x + textWidth(keyLabel) + 12
+              && mouseY > y - 14 && mouseY < y + 6;
 
   const labelWidth = textWidth(keyLabel);
   const keyWidth = labelWidth + 12;
   const keyHeight = 20;
+  const sunk = isHot ? 2 : 0; // pressed keys drop into their shadow
 
-  // Key bg
-  stroke(isHot ? 255 : 60);
-  fill(isHot ? 246 : 0);
-  rect(x, y - 14, keyWidth, keyHeight, 4);
+  keycaps.push({ k: keyLabel === 'Shift' ? '' : keyLabel, x, y: y - 14, w: keyWidth, h: keyHeight });
 
-  // Key text
+  // shadow
   noStroke();
-  fill(isHot ? 0 : 255);
-  const textX = x + (keyWidth - labelWidth) / 2;
-  text(keyLabel, textX, y);
+  fill(0);
+  rect(x, y - 11, keyWidth, keyHeight, 4);
+
+  // body
+  fill(isHot ? 28 : isOver ? 64 : 46);
+  rect(x, y - 14 + sunk, keyWidth, keyHeight, 4);
+
+  // bevel: light catches the top edge
+  if (!isHot) {
+    fill(72);
+    rect(x + 2, y - 13 + sunk, keyWidth - 4, 2, 1);
+  }
+
+  // label
+  fill(isHot ? 255 : 205);
+  text(keyLabel, x + (keyWidth - labelWidth) / 2, y + sunk);
 
   return x + keyWidth;
 }
@@ -432,11 +446,12 @@ function drawRow(label, keys, val, y) {
 
   let x = SIDEBAR.margin;
   noStroke();
-  fill(255);
+  fill(165);
   text(head, x, y);
   x += textWidth(head) + (v ? 0 : SIDEBAR.pad);
   if (lo && hi) x = drawKeycap(lo, x, y) + SIDEBAR.gap;
   if (v) {
+    fill(240);
     textStyle(BOLD);
     const vw = textWidth(v);
     text(v, x, y);
@@ -447,22 +462,24 @@ function drawRow(label, keys, val, y) {
 }
 
 function drawSectionHeader(label, y) {
-  fill(150);
+  fill(115);
+  textSize(11);
   textStyle(BOLD);
   text(label, SIDEBAR.margin, y);
+  textSize(SIDEBAR.size);
   textStyle(NORMAL);
 }
 
 function drawHUD() {
+  keycaps = [];
   noStroke();
-  fill(0);
+  fill(22);
   rect(0, 0, SIDEBAR_WIDTH, CANVAS_HEIGHT);
-  stroke(100);
+  stroke(45);
   line(SIDEBAR_WIDTH, 0, SIDEBAR_WIDTH, CANVAS_HEIGHT);
 
   textSize(SIDEBAR.size);
   noStroke();
-  fill(0);
 
   let y = 0;
   for (const [label, keys, val] of CONTROLS) {
@@ -472,14 +489,11 @@ function drawHUD() {
       drawRow(label, keys, val, y);
       continue;
     }
-
-    // Section headers and export rows
     if (keys) {
       y += SIDEBAR.rowH;
       drawRow(label, keys, val, y);
       continue;
     }
-
     y += SIDEBAR.rowH;
     drawSectionHeader(label, y);
   }
@@ -487,8 +501,21 @@ function drawHUD() {
   if (state.lastSaved) {
     y += SIDEBAR.rowH;
     noStroke();
-    fill(0, 150, 0);
+    fill(190);
     text('✓ ' + state.lastSaved, SIDEBAR.margin, y + 6);
+  }
+
+  const over = keycaps.some(c => c.k && mouseX > c.x && mouseX < c.x + c.w && mouseY > c.y && mouseY < c.y + c.h);
+  cursor(over ? 'pointer' : 'default');
+}
+
+function mousePressed() {
+  for (const c of keycaps) {
+    if (c.k && mouseX > c.x && mouseX < c.x + c.w && mouseY > c.y && mouseY < c.y + c.h) {
+      key = c.k;
+      keyPressed();
+      return false;
+    }
   }
 }
 
