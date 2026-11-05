@@ -30,27 +30,12 @@ const STEM_THICKNESS = 4;
 
 const CURVE_FORMULAS = {
   parabola:     (p) => 4 * p * (1 - p),                     // classic arch
-  negParabola:  (p) => -(4.0 * p * (1.0 - p)),              // backwards
   sCurve:       (p) => Math.sin(Math.PI * p),
-  cCurve:       (p) => Math.sin(Math.PI * p),
   tallS:        (p) => {
     const taper = 0.8;                                      // higher = bigger difference
     const scaleFactor = 0.5 + taper * p;
     return Math.sin(Math.PI * p) * scaleFactor;
   },
-  doubleS:      (p) => Math.sin(Math.PI * p),
-  asymmetricSSmooth: (p) => {
-    const breakpoint = 0.7;
-    const k = Math.log(0.5) / Math.log(breakpoint);
-    return Math.sin(2 * Math.PI * Math.pow(p, k));
-  },
-  smoothSFlipped: (p) => {
-    const breakpoint = 0.6;
-    const k = Math.log(0.5) / Math.log(breakpoint);
-    const mirroredP = 1.0 - p;
-    return Math.sin(2.0 * Math.PI * Math.pow(mirroredP, k));
-  },
-  sineArch:     (p) => Math.sin(Math.PI * p),
 };
 
 // =====================================================================
@@ -186,7 +171,7 @@ function angleAttrs(yProgress, state) {
 
 // bell-shaped envelope peaking at peakPos (0-1).
 function smoothEnvelope(t, peakPos, risePower, fallPower) {
-  if (t <= 0 || t >= 1 || peakPos === 0) return 0;
+  if (t <= 0 || t >= 1) return 0;
   const rise = Math.pow(Math.min(1.0, t / peakPos), risePower);
   const fall = Math.pow(Math.max(0.0, (1.0 - t) / (1.0 - peakPos)), fallPower);
   return Math.min(1.0, rise * fall);
@@ -199,7 +184,7 @@ function scaleAttrs(yProgress, leafSize, state) {
   const fallPower = state.scaleCurve;     // tip taper (global param)
   const envelope = smoothEnvelope(yProgress, peakPosition, risePower, fallPower);
   const scale = 0.08 + 2 * envelope;      // map envelope 0->1 to scale 0.08->2.0
-  return { size: leafSize * scale, envelope };
+  return leafSize * scale ;
 }
 
 // horizontal leaves (low angle) need more space to avoid overlap
@@ -210,17 +195,17 @@ function angleAwareSpacing(size, angleDeg, spacingRatio) {
 }
 
 function leafletAttrs(yProgress, leafSize, sr, state) {
-  const sa = scaleAttrs(yProgress, leafSize, state);
+  const size = scaleAttrs(yProgress, leafSize, state);
   const angle = angleAttrs(yProgress, state);
-  const spacing = angleAwareSpacing(sa.size, angle, sr);
-  return { size: sa.size, angle, spacing, envelope: sa.envelope };
+  const spacing = angleAwareSpacing(size, angle, sr);
+  return { size: size, angle, spacing };
 }
 
 function inBounds(currentY, endY, direction) {
   return direction < 0 ? currentY > endY : currentY < endY;
 }
 
-function computeSegmentGeometry(i, startY, currentY, length, bend, leafSize, depth, sr, state, curveFn) {
+function computeSegmentGeometry(i, startY, currentY, length, bend, leafSize, sr, state, curveFn) {
   const distTraveled = Math.abs(startY - currentY);
   const progress = distTraveled / length;
   const curveX = bend * curveFn(progress);
@@ -299,9 +284,7 @@ function drawFrond(g, length, leafSize, startY, endY, direction, depth, curveDir
   const effectiveLoops = emptyStemSteps + Math.max(2, maxLeaves);
   const minLocalSpacing = 2;
 
-  const curveFn = depth === 0
-    ? CURVE_FORMULAS[state.stemCurve]
-    : CURVE_FORMULAS[random(['sCurve', 'parabola'])];
+  const curveFn = depth === 0 ? CURVE_FORMULAS.tallS : random([CURVE_FORMULAS.sCurve, CURVE_FORMULAS.parabola]);
 
   let i = 0;
   let currentY = startY + direction * emptyStepSize;
@@ -311,7 +294,7 @@ function drawFrond(g, length, leafSize, startY, endY, direction, depth, curveDir
   while (i < effectiveLoops && inBounds(currentY, endY, direction)) {
     const distTraveled = Math.abs(startY - currentY);
     const { curveX, size, rotation, spacing } =
-      computeSegmentGeometry(i, startY, currentY, length, bend, leafSize, depth, sr, state, curveFn);
+      computeSegmentGeometry(i, startY, currentY, length, bend, leafSize, sr, state, curveFn);
     const localSpacing = Math.max(minLocalSpacing, spacing);
     const taper = i / (effectiveLoops - 1);
 
@@ -339,7 +322,7 @@ function drawFrond(g, length, leafSize, startY, endY, direction, depth, curveDir
 function drawFern(g, state) {
   const emergenceY = SKETCH_HEIGHT / 2; // 0 = center
   const frondLen = state.frondLength;
-  const localState = { ...state, stemCurve: 'tallS' };
+  const localState = {...state};
 
   g.push();
   g.translate(0, emergenceY);
@@ -454,14 +437,6 @@ function drawKeycap(keyLabel, x, y) {
   text(keyLabel, textX, y);
 
   return x + keyWidth;
-}
-
-function rowWidth(label, keys, val) {
-  const v = val ? String(val()) : '', [lo, hi] = keys.split(' ');
-  let w = textWidth(v ? label + ': ' : label) + (v ? 0 : SIDEBAR.pad);
-  if (lo && hi) w += textWidth(lo) + 8 + SIDEBAR.gap;
-  if (v) { textStyle(BOLD); w += textWidth(v) + SIDEBAR.gap; textStyle(NORMAL); }
-  return w + textWidth(hi || lo) + 8;
 }
 
 function drawRow(label, keys, val, y) {
