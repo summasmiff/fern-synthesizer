@@ -1,6 +1,6 @@
 # Fern Synthesizer
 
-A browser-based generative art sketch built in p5.js (Processing) that builds fern fronds with recursive subfronds, adjustable leaf geometry, and a handful of organic tuning controls.
+A browser-based generative art sketch inspired by the recursive structure of ferns. Built during my Artist's Residency at LASC, it turns a fern’s repeated branching into a parametric generator that can be tuned interactively to produce many variations, from delicate fronds to dense, layered forms.
 
 [Live demo](https://summasmiff.github.io/fern-synthesizer/)
 
